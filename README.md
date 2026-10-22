@@ -16,5 +16,6 @@ extracted for use in a Tauri application.
   The builder produces it; the generators consume it (`generateComponent(uidl)` /
   `generateProject(uidl)`), after validation. Full annotated structures are in the report.
 
-Status: report-only (no code extracted, no builder built) — decided 2026-10-22.
+Status: research/report-only (no code extracted, no builder built) — decided 2026-10-22.
 Recorded preferences if this proceeds later: React + Vite + TypeScript, web-first / Tauri-ready.
+Recommended next spike (on go-ahead): embed Puck (`@puckeditor/core`), JSON file as source of truth. See shortlist §6.
