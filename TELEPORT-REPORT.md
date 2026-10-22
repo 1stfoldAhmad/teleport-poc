@@ -68,8 +68,8 @@ Root `package.json` describes it accurately: *"Code generators and UIDL definiti
 | Group | Packages | Purpose |
 |-------|----------|---------|
 | **UIDL core (the "engine")** | `teleport-types`, `teleport-uidl-validator`, `teleport-uidl-builders`, `teleport-uidl-resolver`, `teleport-shared` | UIDL TypeScript types, JSON schema validation/decoding, programmatic UIDL construction helpers, element mapping/resolution, shared utils |
-| Component generators | `teleport-component-generator`, `-react`, `-Vue, `-angular`, `-html` | `ComponentUIDL → component files` |
-| Project generators | `teleport-project-generator`, `-react`, `-next`, `-Vue, `-nuxt`, `-angular`, `-html` | `ProjectUIDL → whole project files` |
+| Component generators | `teleport-component-generator`, `-react`, `-Vue`, `-angular`, `-html` | `ComponentUIDL → component files` |
+| Project generators | `teleport-project-generator`, `-react`, `-next`, `-Vue`, `-nuxt`, `-angular`, `-html` | `ProjectUIDL → whole project files` |
 | Facade / packer | `teleport-code-generator`, `teleport-project-packer`, `teleport-github-gateway` | Combined API: generate → pack → publish |
 | Generator plugins (~30) | `teleport-plugin-*`, `teleport-project-plugin-*` | JSX/CSS/routing/head/styling transformations during generation |
 | Post-processors | `teleport-postprocessor-prettier-*`, `-vue-file` | Formatting emitted code |
