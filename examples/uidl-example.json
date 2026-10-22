@@ -1,0 +1,23 @@
+{
+  "name": "TuariHeroCard",
+  "node": {
+    "type": "element",
+    "content": {
+      "elementType": "container",
+      "children": [
+        {
+          "type": "element",
+          "content": {
+            "elementType": "text",
+            "children": [
+              {
+                "type": "static",
+                "content": "Hello from Tuari + Teleport"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

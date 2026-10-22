@@ -1,0 +1,19 @@
+{
+  "name": "@1stfoldAhmad/teleport-poc",
+  "version": "0.1.0",
+  "description": "Teleport-inspired UIDL-powered visual builder scaffold for a custom app",
+  "license": "MIT",
+  "type": "module",
+  "private": false,
+  "scripts": {
+    "generate": "node --loader ts-node/esm src/index.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@teleporthq/teleport-component-generator-react": "^0.44.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.0",
+    "typescript": "^5.8.0"
+  }
+}
