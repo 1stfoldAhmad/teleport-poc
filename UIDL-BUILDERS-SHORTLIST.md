@@ -185,6 +185,7 @@ Ready drag-drop editor that edits **live HTML pages** (Bootstrap-friendly): comp
 | **Email Builder JS** (MIT, 1.7k★) | Good JSON block builder, but **email-only** document model; note it if you ever need email templates in Tauri. |
 | **Lowdefy** | Active (Apache) but **config-as-code (YAML)**, no ready drag-drop builder. |
 | **TeleportHQ generators** | No builder at all (see `TELEPORT-REPORT.md`) — the reason for this search. |
+| **hi-donwi/UIDL-Builder** (checked 2026-10-22, see §7) | Genuinely UIDL-type and functionally impressive, but **5 weeks old, 0★, solo author, no releases — and no `LICENSE` file** despite an MIT badge in the README. |
 
 ---
 
@@ -243,6 +244,45 @@ A lossless bidirectional converter is **not** realistic (dynamic bindings/events
 3. Save/Load document JSON (download/upload in web; Tauri `fs`+dialog later), plus `<Render>` preview route and JSON viewer panel.
 4. Import-check: hand-convert `component-sample.json` (Teleport) to Puck Data to prove the model mapping in §5.
 5. Decide: Puck JSON as native format (recommended) vs. maintaining a Teleport-UIDL import/export layer.
+
+---
+
+## 7. Addendum (2026-10-22): `hi-donwi/UIDL-Builder` — checked on request
+
+**Repo:** https://github.com/hi-donwi/UIDL-Builder · **Live demo:** https://hi-donwi.github.io/UIDL-Builder/ · **Verdict: interesting reference/starter, NOT a production foundation today — Fit score 42/100** (concept fit is high; license + maturity kill it). It does not displace Puck (92) or GrapesJS (86).
+
+### What it is
+
+A standalone **React 19 + Vite + TypeScript + Tailwind 4 + Zustand** studio app (~8,700 LOC) built on the author's own **`uidl-runtime`** npm package. It is genuinely TeleportHQ-type, not Figma-type: drag-and-drop canvas with desktop/tablet/mobile viewports, layer tree, property inspector auto-generated from widget prop descriptors, visual action/event binding (`setState`, `navigate`, `api`, `showDialog`…), state & data-sources editor, theme-token studio, template gallery, two-way JSON editing, import/export, offline `localStorage` drafts, cross-tab `BroadcastChannel` sync, and React/Flutter/Compose snippet export. **Verified working:** cloned it — `pnpm install` ✅, `tsc --noEmit` ✅, **64/64 Vitest tests pass** ✅, production build ✅ (754 kB JS / 203 kB gzip), GitHub Pages deploy green, live demo loads.
+
+### Its JSON is its OWN UIDL dialect — not Teleport's
+
+```json
+{ "$schema": "https://uidl.dev/schema/v1/document.json", "version": "1.0.0",
+  "id": "customer-onboarding-form", "name": "Customer Onboarding",
+  "root": { "id": "form_root", "type": "Container",
+            "props": { "className": "max-w-2xl mx-auto p-8 …" },
+            "children": [ { "id": "input_name", "type": "TextField",
+                            "props": { "label": "Company Name" } } ] } }
+```
+
+Document = `{ $schema, version, id, name, route?, theme?, state?, dataSources?, definitions?, root }`; node = `{ id, type, props, children?, slots? }` with a fixed widget registry (Container, Row, Text, Button, TextField, Select, DataTable, charts…) and **Tailwind `className` strings** for styling. Structurally this is closer to Puck's model than to Teleport's `ComponentUIDL` (`node.content.elementType/style{}/attrs/events`) — **it cannot open Teleport `component.json`/`project.json`, and Teleport generators cannot consume its output.** "UIDL" here is the generic term reused for a new, single-author schema (v1.0.0, Sept 2026). Its code export is also *runtime embedding* (generated TSX/Dart/Kotlin just embeds the JSON + calls that platform's UIDL renderer), not Teleport-style per-node code generation — so your output stays coupled to `uidl-runtime` and its sibling runtimes.
+
+### Scorecard against your five criteria
+
+| Criterion | Result | Evidence (2026-10-22) |
+|-----------|--------|----------------------|
+| UIDL-type (Teleport-like, not Figma) | ✅ **Pass** | JSON document is the source of truth; builder + runtime renderer around it |
+| Open source | ❌ **Fail (as-is)** | README shows an MIT badge + "MIT © Doni Wicaksono", **but there is no `LICENSE` file**, no `license` field in `package.json`, and the GitHub API reports `license: null`. Default copyright = all rights reserved; the badge alone is not a usable commercial grant. (The `uidl-runtime` dependency itself *is* properly MIT.) |
+| Actively maintained | 🟡 **Unproven** | 15 commits, last push 2026-10-18 — but that's a 5-week history from **1 contributor**, no releases/tags |
+| Ready-made | 🟡 **As an app, yes; as an embeddable, no** | Working studio + live demo, but `package.json` has no `main`/`exports` — it's a Vite **application**, not an npm editor component. Tauri use = fork the whole app and rewire `localStorage` → Tauri FS |
+| Mature | ❌ **Fail** | Created **2026-09-17**, v0.1.0, **0 stars / 0 forks / 0 users**, runtime `uidl-runtime@0.1.6` first published 2026-09-13; builder even pins an older runtime (0.1.6) than npm latest (0.1.8) |
+
+### How to use it safely
+
+1. **Do not** copy its code into a commercial product until the author adds a real `LICENSE` file (one PR/issue could fix this — the README suggests MIT was intended).
+2. **Do** use it as a *feature checklist / UX reference* for a Puck-based builder: document-health auditor, schema migration, action simulator, template gallery, and state/data-source panels are ideas Puck leaves to you.
+3. If the license is fixed and it survives 6+ months with tagged releases, re-score it — as a *forkable starter app* (same React+Vite+TS stack you'd use in Tauri) it could reach ~55/100, still below Puck as an embeddable SDK.
 
 ---
 
