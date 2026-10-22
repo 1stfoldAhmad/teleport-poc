@@ -286,9 +286,66 @@ Document = `{ $schema, version, id, name, route?, theme?, state?, dataSources?, 
 
 ---
 
+## 8. Addendum (2026-10-22): Webstudio `apps/builder/package.json` — deep dive
+
+**File checked:** https://github.com/webstudio-is/webstudio/blob/main/apps/builder/package.json (`main`, 2026-10-22). This confirms — and sharpens — the §1/§3 Webstudio entry (52/100). **Verdict: excellent, mature website-builder *service*; not an embeddable Tauri builder component. Direct-embedding fit ≈ 25/100; the 52/100 stands only for running it as a separate self-hosted service.**
+
+### What that one file proves
+
+| `package.json` fact | Meaning for you |
+|---|---|
+| `"name": "@webstudio-is/builder", "version": "0.0.0", "private": true`, no `main`/`exports` | **Never published to npm.** There is no `npm install` + `<Builder/>` embedding path (contrast Puck's `@puckeditor/core`). Description says it plainly: *"Webstudio Builder UI as a service."* |
+| `"license": "AGPL-3.0-or-later"` (in the builder package itself) | Embedding a modified copy in a distributed commercial Tauri app triggers AGPL source-disclosure analysis for the combined/modified work — incompatible with a closed-source desktop binary without legal structuring (see §1 caveats; not legal advice). |
+| `"build": "remix vite:build"`, `"start": "remix-serve build/server/index.js"` | Output is a **full-stack Remix server**, not a static webview bundle. Tauri's frontend is static assets — this builder demands a running Node server behind it. |
+| `"backend": "bash ./backend/run.sh"`, `"dev:local": "bash ./dev/run-local.sh"` | Local run = Docker Compose backend: **Supabase Postgres + PostgREST + Prisma client + schema snapshot** (`apps/builder/backend/compose.yaml`, `dev/run-local.sh`), plus committed `.env` keys: `DATABASE_URL`, `AUTH_SECRET`, `POSTGREST_URL`, S3 + publisher config. (Could not run it in this sandbox: no Docker available — which is itself the point vs. Puck's zero-service model.) |
+| **120 dependencies + 22 devDependencies; 33 are `workspace:*`** | The builder is inseparable from the monorepo (`apps/builder` alone = 1,330 of the repo's 4,601 files; repo ≈144 MB): `sdk`, `css-engine`, `react-sdk`, `project-build`, `sync-client`, `protocol`, `dashboard`, `plans`, `wsauth`, `asset-uploader`… "Extracting the builder" = dragging or decoupling 33 internal packages. |
+| Server/platform deps: `@remix-run/*`, `express`, `@trpc/server`, `remix-auth{,-github,-google,-oauth2}`, `@tus/{server,s3-store}`, `@vercel/remix`, `@tsndr/cloudflare-worker-jwt` | Auth, billing/plans, uploads-to-S3, publishing — SaaS furniture an offline desktop app must strip or replace. |
+| Depends on `@webstudio-is/sdk-components-animation` | That package is **`LicenseRef-Webstudio,Inc-Proprietary`** — even the AGPL fork is not 100% open source unless that dependency is removed/replaced. |
+| Frontend deps (the good part): `@atlaskit/pragmatic-drag-and-drop`, Radix, Lexical, CodeMirror 6, `nanostores`, `immer`/`immerhin`, `zod` | A genuinely professional editor stack — but wired to the server through tRPC + sync-client transaction plumbing, not local file state. |
+
+### Its JSON model (UIDL-type? partly)
+
+The saved document (`SerializedBuild`, `packages/project-build/src/schema.ts`) is normalized, Craft-like JSON — but stored in Postgres and synced by transactions, not owned as a portable file:
+
+```json
+{ "id": "…", "projectId": "…", "version": 42,
+  "pages": [ /* … */ ], "breakpoints": [["bp1", { "minWidth": 768 }]],
+  "instances": [["id1", { "type": "instance", "id": "id1", "component": "Box",
+                          "children": [{ "type": "text", "value": "Hello" },
+                                       { "type": "id", "value": "id2" }] }]],
+  "props": [["p1", { /* … */ }]],
+  "styles": [["…", { "property": "color", "value": { "type": "rgb", "r": 255, "g": 0, "b": 0 } }]],
+  "styleSources": [["…", { "type": "token", "name": "Primary" }]],
+  "styleSourceSelections": [["id1", { "instanceId": "id1", "values": ["…"] }]],
+  "dataSources": [], "resources": [] }
+```
+
+Authoring is **Webflow-style direct CSS** (every CSS property × breakpoint × state, design tokens as style sources) over HTML-ish components — closer to a precision design canvas than to Teleport's abstract `ComponentUIDL` props/events model. It is *not* Teleport-UIDL compatible, and the practical "source of truth" for a user is the **database row / Webstudio Cloud project**; the CLI can sync project JSON down and scaffold a Remix app or static site, but that's an export pipeline, not a JSON file your Tauri app owns and re-opens natively.
+
+### Scorecard vs. your criteria
+
+| Criterion | Result |
+|---|---|
+| UIDL-type, not Figma-type | 🟡 JSON tree exists, but the model is *Webflow-type* (DOM + full CSS authority), not *Teleport-type* (abstract components/props) |
+| Open source | 🟡 Core AGPL-3.0-or-later (real OSS, copyleft) **+ one proprietary dependency**; AGPL is the problem for a closed commercial Tauri binary |
+| Actively maintained | ✅ 9,100★ / 1,626 forks, created 2022, pushed 2026-10-21, release 0.306.0 (2026-10-14) |
+| Ready-made | ✅ as a hosted/self-hosted **service** (official docs: self-hosting the *Builder* in production is *"more difficult and currently not recommended"*; self-hosting generated *sites* is fully supported) · ❌ as an embeddable component |
+| Mature | ✅ Most mature open Webflow alternative; years of production use |
+
+### Your only realistic Tauri paths with Webstudio
+
+1. **External authoring, Tauri as viewer (viable):** design in Webstudio (cloud or self-hosted), export via CLI (Remix app / static site), ship the *output* inside/alongside Tauri. The builder is not *in* your app, and exported apps still depend on Webstudio's AGPL runtime packages — review distribution obligations.
+2. **Sidecar service (heavy):** bundle Node + the Remix server + Postgres + PostgREST next to Tauri, bypass SaaS auth/plans/publisher, replace S3 with local storage. Weeks-to-months, plus AGPL compliance for the modified whole.
+3. **Frontend extraction (not recommended):** cut the canvas UI away from 33 workspace packages and its sync backend, re-implement persistence on Tauri FS. That's a rewrite program, at which point Puck (or Craft-style own-build) is strictly cheaper.
+
+**Bottom line:** if you want a Webflow for building *websites*, Webstudio is arguably the best open-source answer — use it as a tool/service. If you want a builder *inside your Tauri app* editing JSON files offline, this `package.json` is the evidence that Webstudio is the wrong shape: `private`, server-first, AGPL, monorepo-locked. Ranking unchanged: **Puck (92) → GrapesJS (86) → Webstudio-as-service (52)**.
+
+---
+
 ## Appendix — sources (all checked 2026-10-22)
 
 - GitHub API snapshots for every repo above (stars / `pushed_at` / latest release / LICENSE contents) — repo links inline in tables.
 - npm registry: `@puckeditor/core@0.23.0` (MIT, 2026-08-07) · `grapesjs@0.23.8` (BSD-3-Clause, 2026-10-15) · `@craftjs/core@0.2.12` (MIT, 2025-02-14) · `@react-page/editor@5.4.6` (MIT, 2026-07-28) · `amis`/`amis-editor@6.13.0` (2025-08-12) · `@alilc/lowcode-engine@1.3.4` (2025-03-11) · `@chaibuilder/sdk@4.0.0-beta.51` (BSD-3-Clause, 2026-03-16); `chaicore` not found on npm.
 - Puck docs: https://puckeditor.com/docs (Config, Data model, `<Puck>`, `<Render>`) · GrapesJS: https://grapesjs.com · Craft.js: https://craft.js.org · Amis: https://baidu.github.io/amis · Plasmic licensing split: repo `LICENSE.md` + `LICENSE.platform.md` · Webstudio licensing: repo README · NocoBase: repo `LICENSE.txt` + `LICENSE-APACHE.txt` (2026-02-24).
+- Webstudio `apps/builder` deep dive (§8): `apps/builder/package.json` (private, AGPL-3.0-or-later, Remix server scripts, 33 `workspace:*` deps), `apps/builder/backend/compose.yaml` + `dev/run-local.sh` (Postgres/PostgREST/Prisma), `packages/project-build/src/schema.ts` (`SerializedBuild`), `packages/sdk/src/schema/instances.ts`, per-package licenses (`sdk-components-animation` = proprietary), official docs: https://docs.webstudio.is/university/self-hosting and https://docs.webstudio.is/basics/faq .
 - Teleport baseline: [`TELEPORT-REPORT.md`](./TELEPORT-REPORT.md).
